@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/goal_spec/v1.json",
+  "type": "object",
+  "required": ["goalId", "goalDescription"],
+  "properties": {
+    "goalId": {"type": "string"},
+    "goalDescription": {"type": "string"},
+    "requiredActions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Exact actionRef values expected in IR (e.g., plugin.http.get)"
+    },
+    "expectedArtifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {"type": "string"},
+          "minSizeBytes": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": false
+      }
+    },
+    "jsonInvariants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "jsonpath", "op"],
+        "properties": {
+          "path": {"type": "string", "description": "File path to JSON content"},
+          "jsonpath": {"type": "string"},
+          "op": {"type": "string", "enum": ["count_gte", "count_eq", "value_gte", "value_eq"]},
+          "value": {}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

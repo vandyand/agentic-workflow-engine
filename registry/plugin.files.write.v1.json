@@ -1,0 +1,47 @@
+{
+  "kind": "plugin",
+  "name": "plugin.files",
+  "versions": {
+    "write": {
+      "v1": {
+        "title": "plugin.files.write",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "path",
+            "content"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "overwrite": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "bytesWritten"
+          ],
+          "properties": {
+            "bytesWritten": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

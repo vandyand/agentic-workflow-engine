@@ -1,0 +1,28 @@
+{
+  "kind": "plugin",
+  "name": "plugin.schema",
+  "versions": {
+    "vet": {
+      "v1": {
+        "title": "Vet and normalize JSON Schema for OpenAI json_schema usage",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": ["schema"],
+          "properties": {
+            "schema": {"type": "object"}
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": ["schema"],
+          "properties": {
+            "schema": {"type": "object"}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

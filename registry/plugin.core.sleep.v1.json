@@ -1,0 +1,40 @@
+{
+  "kind": "plugin",
+  "name": "plugin.core",
+  "versions": {
+    "sleep": {
+      "v1": {
+        "title": "plugin.core.sleep",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "duration"
+          ],
+          "properties": {
+            "duration": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

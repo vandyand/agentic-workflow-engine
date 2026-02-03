@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/compliance_result/v1.json",
+  "type": "object",
+  "required": ["compliant", "violations"],
+  "properties": {
+    "compliant": {"type": "boolean"},
+    "score": {"type": "number"},
+    "violations": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

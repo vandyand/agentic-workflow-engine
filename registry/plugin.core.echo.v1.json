@@ -1,0 +1,33 @@
+{
+  "kind": "plugin",
+  "name": "plugin.core",
+  "versions": {
+    "echo": {
+      "v1": {
+        "title": "plugin.core.echo",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "kind": "plugin",
+  "name": "plugin.xml",
+  "versions": {
+    "extract_data": {
+      "v1": {
+        "title": "plugin.xml.extract_data",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

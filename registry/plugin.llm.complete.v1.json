@@ -1,0 +1,32 @@
+{
+  "kind": "plugin",
+  "name": "plugin.llm",
+  "versions": {
+    "complete": {
+      "v1": {
+        "compat": "backward",
+        "requiredPermissions": ["execute:llm"],
+        "inputSchema": {
+          "type": "object",
+          "required": ["model", "prompt"],
+          "properties": {
+            "model": { "type": "string" },
+            "prompt": { "type": "string" },
+            "max_tokens": { "type": "integer" },
+            "temperature": { "type": "number" },
+            "context": {}
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": ["text"],
+          "properties": {
+            "text": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

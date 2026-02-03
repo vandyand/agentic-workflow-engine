@@ -1,0 +1,29 @@
+{
+  "kind": "plugin",
+  "name": "plugin.transform",
+  "versions": {
+    "pdf_url_to_text": {
+      "v1": {
+        "title": "Download a PDF from a URL and extract plain text",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": ["pdf_url"],
+          "properties": {
+            "pdf_url": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": ["text"],
+          "properties": {
+            "text": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}
+

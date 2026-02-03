@@ -1,0 +1,39 @@
+{
+  "kind": "plugin",
+  "name": "plugin.core",
+  "versions": {
+    "timer": {
+      "v1": {
+        "title": "plugin.core.timer",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "kind": "plugin",
+  "name": "plugin.transform",
+  "versions": {
+    "xml2json": {
+      "v1": {
+        "title": "Transform Atom XML to JSON results",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": ["xml"],
+          "properties": {
+            "xml": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": ["json"],
+          "properties": {
+            "json": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        "drift": { "strictMode": false }
+      }
+    }
+  }
+}

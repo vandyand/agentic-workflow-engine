@@ -1,0 +1,33 @@
+{
+  "kind": "plugin",
+  "name": "plugin.schema",
+  "versions": {
+    "generate_from_prompt": {
+      "v1": {
+        "title": "Generate vetted JSON Schema from natural language description",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": ["description"],
+          "properties": {
+            "description": {"type": "string"},
+            "model": {"type": "string"},
+            "savePath": {"type": "string"},
+            "verbose": {"type": "boolean"},
+            "skipVet": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": ["schema"],
+          "properties": {
+            "schema": {"type": "object"},
+            "path": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

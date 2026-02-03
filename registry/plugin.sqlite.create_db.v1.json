@@ -1,0 +1,55 @@
+{
+  "kind": "plugin",
+  "name": "plugin.sqlite",
+  "versions": {
+    "create_db": {
+      "v1": {
+        "title": "Custom Action",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "type": "string"
+            },
+            "line": {
+              "type": "integer"
+            },
+            "column": {
+              "type": "integer"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "error",
+            "line",
+            "column",
+            "source"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "compiled": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "compiled",
+            "message"
+          ]
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

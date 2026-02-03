@@ -1,0 +1,33 @@
+{
+  "kind": "plugin",
+  "name": "plugin.schema",
+  "versions": {
+    "hydrate": {
+      "v1": {
+        "title": "Hydrate JSON data from schema and prompt via OpenAI",
+        "requiredPermissions": ["execute:llm"],
+        "inputSchema": {
+          "type": "object",
+          "required": ["prompt"],
+          "properties": {
+            "prompt": {"type": "string"},
+            "schema": {"type": "object"},
+            "schemaPath": {"type": "string"},
+            "model": {"type": "string"},
+            "strict": {"type": "boolean"},
+            "skipVet": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": ["result"],
+          "properties": {
+            "result": {}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

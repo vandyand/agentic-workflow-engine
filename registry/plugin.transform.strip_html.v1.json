@@ -1,0 +1,39 @@
+{
+  "kind": "plugin",
+  "name": "plugin.transform",
+  "versions": {
+    "strip_html": {
+      "v1": {
+        "title": "plugin.transform.strip_html",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "html": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

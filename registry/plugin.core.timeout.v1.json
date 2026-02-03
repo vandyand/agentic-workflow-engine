@@ -1,0 +1,39 @@
+{
+  "kind": "plugin",
+  "name": "plugin.core",
+  "versions": {
+    "timeout": {
+      "v1": {
+        "title": "Custom Action",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ]
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

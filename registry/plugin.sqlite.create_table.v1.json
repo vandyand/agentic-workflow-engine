@@ -1,0 +1,57 @@
+{
+  "kind": "plugin",
+  "name": "plugin.sqlite",
+  "versions": {
+    "create_table": {
+      "v1": {
+        "title": "Custom Action",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "string"
+            },
+            "lineNumber": {
+              "type": "integer"
+            },
+            "fileName": {
+              "type": "string"
+            },
+            "suggestion": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "error",
+            "lineNumber",
+            "fileName"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success",
+                "failure"
+              ]
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

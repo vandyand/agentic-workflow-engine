@@ -1,0 +1,32 @@
+{
+  "kind": "plugin",
+  "name": "plugin.x40",
+  "versions": {
+    "run_experiment": {
+      "v1": {
+        "title": "Run X40 experiment via run_experiment.sh",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": ["expDir"],
+          "properties": {
+            "expDir": {"type": "string"},
+            "port": {"type": "integer"}
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": ["stdout", "metricsPath"],
+          "properties": {
+            "stdout": {"type": "string"},
+            "metricsPath": {"type": "string"},
+            "expDir": {"type": "string"},
+            "port": {"type": "integer"}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

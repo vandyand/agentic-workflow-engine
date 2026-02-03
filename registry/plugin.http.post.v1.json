@@ -1,0 +1,31 @@
+{
+  "kind": "plugin",
+  "name": "plugin.http",
+  "versions": {
+    "post": {
+      "v1": {
+        "compat": "backward",
+        "requiredPermissions": ["write:http"],
+        "inputSchema": {
+          "type": "object",
+          "required": ["url", "body"],
+          "properties": {
+            "url": {"type": "string"},
+            "body": {"type": "object"},
+            "headers": {"type": "object"}
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": ["status", "body"],
+          "properties": {
+            "status": {"type": "integer"},
+            "body": {}
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

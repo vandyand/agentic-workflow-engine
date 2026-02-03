@@ -1,0 +1,39 @@
+{
+  "kind": "plugin",
+  "name": "plugin.transform",
+  "versions": {
+    "jq": {
+      "v1": {
+        "title": "plugin.transform.jq",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "data",
+            "expression"
+          ],
+          "properties": {
+            "data": {},
+            "expression": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "result"
+          ],
+          "properties": {
+            "result": {}
+          },
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

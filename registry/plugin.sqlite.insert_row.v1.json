@@ -1,0 +1,60 @@
+{
+  "kind": "plugin",
+  "name": "plugin.sqlite",
+  "versions": {
+    "insert_row": {
+      "v1": {
+        "title": "Custom Action",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "suggestions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "error",
+            "location"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success",
+                "failure"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "resolved": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "status",
+            "message"
+          ],
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}

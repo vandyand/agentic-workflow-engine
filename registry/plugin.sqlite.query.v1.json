@@ -1,0 +1,68 @@
+{
+  "kind": "plugin",
+  "name": "plugin.sqlite",
+  "versions": {
+    "query": {
+      "v1": {
+        "title": "Custom Action",
+        "requiredPermissions": [],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "string"
+            },
+            "code": {
+              "type": "integer"
+            },
+            "context": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string"
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "column": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "file",
+                "line",
+                "column"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "error",
+            "code",
+            "context"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "message"
+          ],
+          "additionalProperties": false
+        },
+        "drift": {
+          "strictMode": false
+        }
+      }
+    }
+  }
+}
