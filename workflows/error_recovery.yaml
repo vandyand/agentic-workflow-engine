@@ -1,0 +1,35 @@
+kind: process
+version: "1"
+metadata:
+  name: error_recovery
+  description: Demonstrates retry and error handling
+  risk: low
+  principal:
+    id: system:demo
+    permissions:
+      - read:http
+  termination:
+    maxNodes: 3
+    maxRuntimeMs: 30000
+    warnAtPct: 80
+
+nodes:
+  - id: flaky_request
+    actionRef: plugin.http.get
+    schemaVersion: v1
+    input:
+      url: "{url}"
+      headers:
+        User-Agent: agentic-workflow-engine
+    retry:
+      maxAttempts: 3
+      backoffMs: 1000
+    timeoutMs: 5000
+
+  - id: process_result
+    actionRef: plugin.core.echo
+    schemaVersion: v1
+    dependsOn:
+      - flaky_request
+    input:
+      message: "Request completed successfully"

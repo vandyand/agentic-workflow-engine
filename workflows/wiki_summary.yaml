@@ -1,0 +1,72 @@
+kind: process
+version: "1"
+metadata:
+  name: wiki_summary
+  description: Search Wikipedia and summarize top result
+  risk: low
+  principal:
+    id: system:demo
+    permissions:
+      - read:http
+  termination:
+    maxNodes: 10
+    maxRuntimeMs: 60000
+    warnAtPct: 80
+
+nodes:
+  - id: search_wiki
+    actionRef: plugin.http.get
+    schemaVersion: v1
+    input:
+      url: https://en.wikipedia.org/w/api.php
+      params:
+        action: query
+        list: search
+        srsearch: "{query}"
+        srlimit: 3
+        format: json
+      headers:
+        User-Agent: agentic-workflow-engine
+    retry:
+      maxAttempts: 2
+      backoffMs: 1000
+    timeoutMs: 15000
+
+  - id: extract_title
+    actionRef: plugin.transform.jq
+    schemaVersion: v1
+    dependsOn:
+      - search_wiki
+    input:
+      data:
+        $ref: $.nodes.search_wiki.output.body
+      expression: ".query.search[0].title"
+
+  - id: fetch_extract
+    actionRef: plugin.http.get
+    schemaVersion: v1
+    dependsOn:
+      - extract_title
+    input:
+      url: https://en.wikipedia.org/w/api.php
+      params:
+        action: query
+        prop: extracts
+        explaintext: 1
+        exintro: 1
+        titles:
+          $ref: $.nodes.extract_title.output.result
+        format: json
+      headers:
+        User-Agent: agentic-workflow-engine
+    timeoutMs: 15000
+
+  - id: extract_content
+    actionRef: plugin.transform.jq
+    schemaVersion: v1
+    dependsOn:
+      - fetch_extract
+    input:
+      data:
+        $ref: $.nodes.fetch_extract.output.body
+      expression: ".query.pages | to_entries | .[0].value.extract"

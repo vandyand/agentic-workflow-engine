@@ -1,0 +1,41 @@
+kind: process
+version: '1'
+metadata:
+  name: arxiv_search
+  description: Search arXiv for papers and extract results
+  risk: low
+  principal:
+    id: system:demo
+    permissions:
+      - read:http
+  termination:
+    maxNodes: 5
+    maxRuntimeMs: 30000
+    warnAtPct: 80
+
+nodes:
+  - id: fetch_arxiv
+    actionRef: plugin.http.get
+    schemaVersion: v1
+    input:
+      url: https://export.arxiv.org/api/query
+      params:
+        search_query: "all:{query}"
+        start: 0
+        max_results: 5
+      headers:
+        Accept: application/atom+xml
+        User-Agent: agentic-workflow-engine
+    timeoutMs: 15000
+    retry:
+      maxAttempts: 2
+      backoffMs: 1000
+
+  - id: parse_xml
+    actionRef: plugin.transform.xml2json
+    schemaVersion: v1
+    dependsOn:
+      - fetch_arxiv
+    input:
+      xml:
+        $ref: $.nodes.fetch_arxiv.output.body
