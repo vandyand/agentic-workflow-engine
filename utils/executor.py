@@ -1,5 +1,4 @@
 """Workflow executor wrapper for Streamlit integration."""
-import json
 import os
 import subprocess
 import sys
@@ -8,7 +7,6 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-import yaml
 
 
 ROOT = Path(__file__).parent.parent
@@ -193,7 +191,7 @@ def execute_workflow(
         # Clean up temp file
         try:
             os.unlink(tmp_path)
-        except:
+        except OSError:
             pass
 
 

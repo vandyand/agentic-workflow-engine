@@ -14,8 +14,6 @@ from utils.dag_viz import load_workflow, workflow_to_dot
 from utils.cache_manager import (
     get_preset_queries,
     load_cached_result,
-    save_cached_result,
-    PRESET_QUERIES,
 )
 from utils.executor import execute_workflow, ExecutionResult
 
@@ -248,18 +246,32 @@ def render_architecture_tab():
 
         with st.expander(f"🔧 {action_name}"):
             try:
-                with open(reg_file, 'r') as f:
+                with open(reg_file, 'r', encoding='utf-8') as f:
                     schema = json.load(f)
 
-                st.markdown(f"**Description:** {schema.get('description', 'No description')}")
+                # Navigate nested structure: versions -> action -> version
+                input_schema = {}
+                output_schema = {}
+                title = action_name
+
+                versions = schema.get('versions', {})
+                for action_key, action_versions in versions.items():
+                    for version_key, version_data in action_versions.items():
+                        title = version_data.get('title', action_name)
+                        input_schema = version_data.get('inputSchema', {})
+                        output_schema = version_data.get('outputSchema', {})
+                        break  # Use first version found
+                    break  # Use first action found
+
+                st.markdown(f"**Title:** {title}")
 
                 col1, col2 = st.columns(2)
                 with col1:
                     st.markdown("**Input Schema:**")
-                    st.json(schema.get('inputSchema', {}))
+                    st.json(input_schema)
                 with col2:
                     st.markdown("**Output Schema:**")
-                    st.json(schema.get('outputSchema', {}))
+                    st.json(output_schema)
             except Exception as e:
                 st.error(f"Error loading schema: {e}")
 
@@ -274,7 +286,7 @@ def render_architecture_tab():
         workflow_path = WORKFLOWS_DIR / f"{selected}.yaml"
 
         with st.expander("📄 Raw YAML", expanded=False):
-            with open(workflow_path, 'r') as f:
+            with open(workflow_path, 'r', encoding='utf-8') as f:
                 st.code(f.read(), language='yaml')
 
         with st.expander("🔍 Parsed IR (JSON)", expanded=False):
