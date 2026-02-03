@@ -1,0 +1,20 @@
+{
+  "query": "transformer",
+  "workflow": "arxiv_search",
+  "timestamp": "2026-02-03T12:00:00Z",
+  "success": true,
+  "logs": [
+    {"timestamp": "12:00:00", "level": "info", "message": "Starting workflow: arxiv_search"},
+    {"timestamp": "12:00:00", "level": "info", "message": "Query: transformer"},
+    {"timestamp": "12:00:01", "level": "info", "message": "Executing node: fetch_arxiv"},
+    {"timestamp": "12:00:02", "level": "success", "message": "Node complete: fetch_arxiv"},
+    {"timestamp": "12:00:02", "level": "info", "message": "Executing node: parse_xml"},
+    {"timestamp": "12:00:03", "level": "success", "message": "Node complete: parse_xml"},
+    {"timestamp": "12:00:03", "level": "success", "message": "Workflow completed successfully in 3000ms"}
+  ],
+  "node_outputs": {
+    "fetch_arxiv": {"status": 200, "body": "[arXiv XML response - 5 papers about transformers]"},
+    "parse_xml": {"json": {"feed": {"entry": [{"title": "Attention Is All You Need"}, {"title": "BERT: Pre-training of Deep Bidirectional Transformers"}]}}}
+  },
+  "execution_time_ms": 3000
+}

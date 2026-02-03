@@ -1,0 +1,20 @@
+{
+  "query": "normal run",
+  "workflow": "error_recovery",
+  "timestamp": "2026-02-03T12:00:00Z",
+  "success": true,
+  "logs": [
+    {"timestamp": "12:00:00", "level": "info", "message": "Starting workflow: error_recovery"},
+    {"timestamp": "12:00:00", "level": "info", "message": "Query: normal run"},
+    {"timestamp": "12:00:01", "level": "info", "message": "Executing node: flaky_request"},
+    {"timestamp": "12:00:02", "level": "success", "message": "Node complete: flaky_request (attempt 1/3)"},
+    {"timestamp": "12:00:02", "level": "info", "message": "Executing node: process_result"},
+    {"timestamp": "12:00:02", "level": "success", "message": "Node complete: process_result"},
+    {"timestamp": "12:00:02", "level": "success", "message": "Workflow completed successfully in 2000ms"}
+  ],
+  "node_outputs": {
+    "flaky_request": {"status": 200, "body": "200 OK"},
+    "process_result": {"message": "Request completed successfully"}
+  },
+  "execution_time_ms": 2000
+}

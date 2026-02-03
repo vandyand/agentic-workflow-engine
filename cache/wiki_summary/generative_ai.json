@@ -1,0 +1,26 @@
+{
+  "query": "generative AI",
+  "workflow": "wiki_summary",
+  "timestamp": "2026-02-03T12:00:00Z",
+  "success": true,
+  "logs": [
+    {"timestamp": "12:00:00", "level": "info", "message": "Starting workflow: wiki_summary"},
+    {"timestamp": "12:00:00", "level": "info", "message": "Query: generative AI"},
+    {"timestamp": "12:00:01", "level": "info", "message": "Executing node: search_wiki"},
+    {"timestamp": "12:00:02", "level": "success", "message": "Node complete: search_wiki"},
+    {"timestamp": "12:00:02", "level": "info", "message": "Executing node: extract_title"},
+    {"timestamp": "12:00:02", "level": "success", "message": "Node complete: extract_title"},
+    {"timestamp": "12:00:03", "level": "info", "message": "Executing node: fetch_extract"},
+    {"timestamp": "12:00:04", "level": "success", "message": "Node complete: fetch_extract"},
+    {"timestamp": "12:00:04", "level": "info", "message": "Executing node: extract_content"},
+    {"timestamp": "12:00:04", "level": "success", "message": "Node complete: extract_content"},
+    {"timestamp": "12:00:04", "level": "success", "message": "Workflow completed successfully in 4000ms"}
+  ],
+  "node_outputs": {
+    "search_wiki": {"body": {"query": {"search": [{"title": "Generative artificial intelligence"}]}}},
+    "extract_title": {"result": "Generative artificial intelligence"},
+    "fetch_extract": {"body": {"query": {"pages": {"12345": {"extract": "Generative artificial intelligence is a type of AI..."}}}}},
+    "extract_content": {"result": "Generative artificial intelligence is a type of AI system capable of generating text, images, videos, or other data using generative models, often in response to prompts."}
+  },
+  "execution_time_ms": 4000
+}
