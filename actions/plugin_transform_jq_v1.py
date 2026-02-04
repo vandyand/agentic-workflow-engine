@@ -24,19 +24,53 @@ ACTION_META = {
 }
 
 
-def _eval_expression(data: Any, expr: str) -> Any:
-    # Minimal evaluator for expressions like .a.b[0].c
-    if not isinstance(expr, str) or not expr:
-        raise ValueError("expression must be string")
-    # support simple pipelines by truncating at first '|'
-    if '|' in expr:
-        expr = expr.split('|', 1)[0].strip()
+def _eval_single_expression(data: Any, expr: str) -> Any:
+    """Evaluate a single jq expression (no pipes)."""
+    expr = expr.strip()
+    if not expr or expr == '.':
+        return data
+
+    # Handle special jq functions
+    if expr == 'to_entries':
+        if not isinstance(data, dict):
+            raise ValueError("to_entries requires object input")
+        return [{"key": k, "value": v} for k, v in data.items()]
+
+    if expr == 'keys':
+        if not isinstance(data, dict):
+            raise ValueError("keys requires object input")
+        return list(data.keys())
+
+    if expr == 'values':
+        if not isinstance(data, dict):
+            raise ValueError("values requires object input")
+        return list(data.values())
+
+    if expr == 'length':
+        if isinstance(data, (list, dict, str)):
+            return len(data)
+        raise ValueError("length requires array, object, or string")
+
+    if expr == 'first':
+        if isinstance(data, list) and len(data) > 0:
+            return data[0]
+        raise ValueError("first requires non-empty array")
+
+    if expr == 'last':
+        if isinstance(data, list) and len(data) > 0:
+            return data[-1]
+        raise ValueError("last requires non-empty array")
+
+    # Standard path expression starting with '.'
     if not expr.startswith('.'):
-        raise ValueError("expression must start with '.'")
+        raise ValueError(f"expression must start with '.' or be a function, got: {expr}")
+
     cur: Any = data
     # strip leading '.' then split by '.' while preserving [idx]
     tokens: List[str] = expr[1:].split('.') if expr != '.' else []
     for tok in tokens:
+        if not tok:
+            continue
         # handle array index in token like name[0] or [0]
         while tok:
             # compress nested brackets like '[[1]]' by shifting one
@@ -63,9 +97,22 @@ def _eval_expression(data: Any, expr: str) -> Any:
             head = tok if lb == -1 else tok[:lb]
             if head:
                 if not isinstance(cur, dict) or head not in cur:
-                    raise ValueError("field not found")
+                    raise ValueError(f"field not found: {head}")
                 cur = cur[head]
             tok = tok[len(head):]
+    return cur
+
+
+def _eval_expression(data: Any, expr: str) -> Any:
+    """Evaluate a jq expression, supporting pipes."""
+    if not isinstance(expr, str) or not expr:
+        raise ValueError("expression must be string")
+
+    # Split by pipes and evaluate each part in sequence
+    parts = [p.strip() for p in expr.split('|')]
+    cur = data
+    for part in parts:
+        cur = _eval_single_expression(cur, part)
     return cur
 
 

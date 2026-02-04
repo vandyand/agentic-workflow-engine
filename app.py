@@ -49,31 +49,13 @@ def main():
         layout="wide",
     )
 
-    st.title("⚡ Agentic Workflow Engine")
-    st.caption("Schema-driven workflow orchestration for AI applications")
+    # --- Sidebar: Workflow Selection and DAG ---
+    with st.sidebar:
+        st.title("⚡ Workflow Engine")
+        st.caption("Schema-driven orchestration")
 
-    # --- Tabs ---
-    tab_run, tab_how, tab_arch = st.tabs([
-        "🚀 Run Workflows",
-        "🔍 How It Works",
-        "🏗️ Architecture"
-    ])
+        st.markdown("---")
 
-    with tab_run:
-        render_run_workflows_tab()
-
-    with tab_how:
-        render_how_it_works_tab()
-
-    with tab_arch:
-        render_architecture_tab()
-
-
-def render_run_workflows_tab():
-    """Render the main workflow execution tab."""
-    col1, col2 = st.columns([1, 1])
-
-    with col1:
         # Workflow selection
         workflow_options = list(WORKFLOW_INFO.keys())
         workflow_labels = [
@@ -88,7 +70,6 @@ def render_run_workflows_tab():
             key="workflow_select"
         )
         selected_workflow = workflow_options[selected_idx]
-
         st.caption(WORKFLOW_INFO[selected_workflow]['description'])
 
         # Query selection
@@ -107,7 +88,7 @@ def render_run_workflows_tab():
                 "Enter custom query",
                 key="custom_query"
             )
-            st.caption("⚠️ Custom queries run live and may take longer.")
+            st.caption("⚠️ Custom queries run live.")
             selected_query = custom_query
             is_custom = True
         else:
@@ -116,25 +97,71 @@ def render_run_workflows_tab():
 
         # Run button
         run_disabled = is_custom and not selected_query
-        if st.button("▶️ Run Workflow", disabled=run_disabled, type="primary"):
-            run_workflow_and_display(selected_workflow, selected_query, is_custom)
+        run_clicked = st.button("▶️ Run Workflow", disabled=run_disabled, type="primary", use_container_width=True)
 
-    with col2:
-        # DAG visualization
+        # Store selection in session state for main area
+        st.session_state.selected_workflow = selected_workflow
+        st.session_state.selected_query = selected_query
+        st.session_state.is_custom = is_custom
+
+        st.markdown("---")
+
+        # DAG visualization in sidebar
         st.subheader("Workflow DAG")
         workflow_path = WORKFLOWS_DIR / f"{selected_workflow}.yaml"
         if workflow_path.exists():
             workflow = load_workflow(str(workflow_path))
             dot = workflow_to_dot(workflow)
-            st.graphviz_chart(dot)
+            st.graphviz_chart(dot, use_container_width=True)
         else:
             st.warning("Workflow file not found")
+
+    # --- Main Area: Tabs ---
+    tab_run, tab_how, tab_arch = st.tabs([
+        "🚀 Run Workflows",
+        "🔍 How It Works",
+        "🏗️ Architecture"
+    ])
+
+    with tab_run:
+        render_run_workflows_tab(run_clicked)
+
+    with tab_how:
+        render_how_it_works_tab()
+
+    with tab_arch:
+        render_architecture_tab()
+
+
+def render_run_workflows_tab(run_clicked: bool):
+    """Render the main workflow execution tab."""
+
+    st.header("Workflow Execution")
+
+    # Show current selection
+    selected_workflow = st.session_state.get('selected_workflow', 'arxiv_search')
+    selected_query = st.session_state.get('selected_query', '')
+    is_custom = st.session_state.get('is_custom', False)
+
+    if selected_query:
+        st.info(f"**Workflow:** {WORKFLOW_INFO[selected_workflow]['icon']} {WORKFLOW_INFO[selected_workflow]['name']}  \n**Query:** {selected_query}")
+    else:
+        st.info("Select a workflow and query from the sidebar, then click **Run Workflow**.")
+        return
+
+    # Execute if button was clicked
+    if run_clicked:
+        run_workflow_and_display(selected_workflow, selected_query, is_custom)
+
+    # Display previous results if available
+    elif st.session_state.get('execution_result'):
+        display_execution_result(st.session_state.execution_result)
 
 
 def run_workflow_and_display(workflow_name: str, query: str, is_custom: bool):
     """Execute workflow and display results."""
 
-    # Store in session state for How It Works tab
+    # Initialize session state
     if 'execution_result' not in st.session_state:
         st.session_state.execution_result = None
     if 'execution_logs' not in st.session_state:
@@ -151,7 +178,7 @@ def run_workflow_and_display(workflow_name: str, query: str, is_custom: bool):
                 st.info("📦 Showing cached result (live execution failed)")
                 st.session_state.execution_result = cached
                 st.session_state.execution_logs = cached.get('logs', [])
-                display_cached_result(cached)
+                display_execution_result(cached)
                 return
 
         # Store result
@@ -161,25 +188,82 @@ def run_workflow_and_display(workflow_name: str, query: str, is_custom: bool):
             'node_outputs': result.node_outputs,
             'node_executions': [vars(ne) for ne in result.node_executions],
             'execution_time_ms': result.execution_time_ms,
+            'error': result.error,
         }
         st.session_state.execution_logs = result.logs
 
-        # Display result header
-        if result.success:
-            st.success(f"✅ Completed in {result.execution_time_ms}ms")
-        else:
-            st.error(f"❌ Failed: {result.error}")
+        display_execution_result(st.session_state.execution_result)
 
-        # Show node-by-node execution
-        if result.node_executions:
-            st.markdown("### Node Execution Details")
-            display_node_executions(result.node_executions)
 
-        # Show compact log
+def display_execution_result(result: dict):
+    """Display execution result with node details."""
+
+    # Status header
+    if result.get('success'):
+        st.success(f"✅ Completed in {result.get('execution_time_ms', 0)}ms")
+    else:
+        st.error(f"❌ Failed: {result.get('error', 'Unknown error')}")
+
+    # Node execution details
+    if result.get('node_executions'):
+        st.markdown("### Node Execution Details")
+        display_node_executions(result['node_executions'])
+
+        # Summary metrics
+        st.markdown("---")
+        total_nodes = len(result['node_executions'])
+        successful = sum(1 for ne in result['node_executions'] if ne.get('status') == 'success')
+        total_time = result.get('execution_time_ms', 0)
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Nodes Executed", total_nodes)
+        col2.metric("Successful", f"{successful}/{total_nodes}")
+        col3.metric("Total Time", f"{total_time}ms")
+
+    # Raw execution log
+    if result.get('logs'):
         with st.expander("📋 Raw Execution Log", expanded=False):
-            for log in result.logs:
-                icon = {'info': 'ℹ️', 'success': '✅', 'error': '❌', 'running': '▶️'}.get(log.level, '•')
-                st.text(f"[{log.timestamp}] {icon} {log.message}")
+            for log in result['logs']:
+                if isinstance(log, dict):
+                    icon = {'info': 'ℹ️', 'success': '✅', 'error': '❌', 'running': '▶️'}.get(log.get('level', ''), '•')
+                    st.text(f"[{log.get('timestamp', '')}] {icon} {log.get('message', '')}")
+
+
+def parse_json_safe(data):
+    """Parse data into a JSON-displayable format.
+
+    Handles strings that might be JSON, truncated strings, etc.
+    Always returns something st.json() can display nicely.
+    """
+    if data is None:
+        return None
+
+    # If it's already a dict or list, return as-is
+    if isinstance(data, (dict, list)):
+        return data
+
+    # If it's a string, try to parse it as JSON
+    if isinstance(data, str):
+        # Check if it's a truncated string (ends with "... (X chars total)")
+        if "... (" in data and " chars total)" in data:
+            # Try to parse the non-truncated part
+            truncated_part = data.split("... (")[0]
+            try:
+                # Won't work for truncated JSON, but try anyway
+                return json.loads(truncated_part)
+            except (json.JSONDecodeError, ValueError):
+                # Return as a structured object showing it's truncated
+                return {"_truncated": True, "_preview": truncated_part[:200] + "...", "_note": "Data truncated for display"}
+
+        # Try to parse as JSON
+        try:
+            return json.loads(data)
+        except (json.JSONDecodeError, ValueError):
+            # Return as a simple value
+            return {"_value": data}
+
+    # For other types, wrap in a dict
+    return {"_value": str(data)}
 
 
 def display_node_executions(node_executions):
@@ -203,16 +287,13 @@ def display_node_executions(node_executions):
             output_data = ne.get('output_data')
             error = ne.get('error')
 
-        # Status icon and color
+        # Status icon
         if status == 'success':
             icon = '✅'
-            border_color = '#28a745'
         elif status == 'error':
             icon = '❌'
-            border_color = '#dc3545'
         else:
             icon = '▶️'
-            border_color = '#6c757d'
 
         # Node header with metrics
         col1, col2, col3 = st.columns([3, 2, 1])
@@ -232,19 +313,21 @@ def display_node_executions(node_executions):
 
             with tab_in:
                 if input_data:
-                    if isinstance(input_data, str) and len(input_data) > 100:
-                        st.code(input_data, language='json')
+                    parsed = parse_json_safe(input_data)
+                    if parsed:
+                        st.json(parsed)
                     else:
-                        st.json(input_data)
+                        st.caption("No input data")
                 else:
                     st.caption("No input data captured")
 
             with tab_out:
                 if output_data:
-                    if isinstance(output_data, str) and len(output_data) > 100:
-                        st.code(output_data, language='json')
+                    parsed = parse_json_safe(output_data)
+                    if parsed:
+                        st.json(parsed)
                     else:
-                        st.json(output_data)
+                        st.caption("No output data")
                 else:
                     st.caption("No output data captured")
 
@@ -253,37 +336,27 @@ def display_node_executions(node_executions):
             st.markdown("<div style='text-align: center; color: #666;'>⬇️</div>", unsafe_allow_html=True)
 
 
-def display_cached_result(cached: dict):
-    """Display a cached result."""
-    st.success(f"✅ Cached result from {cached.get('timestamp', 'unknown')}")
-
-    with st.expander("Execution Log", expanded=True):
-        for log in cached.get('logs', []):
-            if isinstance(log, dict):
-                icon = {'info': 'ℹ️', 'success': '✅', 'error': '❌', 'running': '▶️'}.get(log.get('level', ''), '•')
-                st.text(f"[{log.get('timestamp', '')}] {icon} {log.get('message', '')}")
-
-    if cached.get('node_outputs'):
-        with st.expander("Node Outputs", expanded=False):
-            st.json(cached['node_outputs'])
-
-
 def render_how_it_works_tab():
-    """Render the execution log viewer tab."""
-    st.subheader("Execution Flow Viewer")
-    st.markdown(
-        "This tab shows the execution flow when you run a workflow. "
-        "Each node displays its inputs, outputs, and timing."
-    )
+    """Render the execution flow explanation tab."""
+    st.header("How It Works")
+
+    st.markdown("""
+    This workflow engine executes **DAG-based workflows** where each node represents an action:
+
+    1. **Workflow Definition** - YAML files define nodes, their actions, inputs, and dependencies
+    2. **Topological Sort** - Nodes are ordered based on their dependencies
+    3. **Sequential Execution** - Each node runs in order, with outputs passed to dependent nodes
+    4. **Error Handling** - Configurable retries with exponential backoff
+
+    ### Execution Flow
+    """)
 
     result = st.session_state.get('execution_result', {})
 
     if result.get('node_executions'):
-        st.markdown("---")
-        st.markdown("### Node-by-Node Execution")
         display_node_executions(result['node_executions'])
 
-        # Summary metrics
+        # Summary
         st.markdown("---")
         st.markdown("### Execution Summary")
         total_nodes = len(result['node_executions'])
@@ -294,42 +367,15 @@ def render_how_it_works_tab():
         col1.metric("Nodes Executed", total_nodes)
         col2.metric("Successful", f"{successful}/{total_nodes}")
         col3.metric("Total Time", f"{total_time}ms")
-
-    elif st.session_state.get('execution_logs'):
-        # Fallback to old log format
-        logs = st.session_state.execution_logs
-        st.markdown("---")
-        for log in logs:
-            if hasattr(log, 'level'):
-                level = log.level
-                timestamp = log.timestamp
-                message = log.message
-            else:
-                level = log.get('level', 'info')
-                timestamp = log.get('timestamp', '')
-                message = log.get('message', '')
-
-            icon = {'info': 'ℹ️', 'success': '✅', 'error': '❌', 'running': '▶️'}.get(level, '•')
-
-            if level == 'success':
-                st.success(f"[{timestamp}] {message}")
-            elif level == 'error':
-                st.error(f"[{timestamp}] {message}")
-            else:
-                st.info(f"[{timestamp}] {icon} {message}")
-
-        if result.get('node_outputs'):
-            st.subheader("Node Outputs")
-            for node_id, output in result['node_outputs'].items():
-                with st.expander(f"📦 {node_id}"):
-                    st.json(output)
     else:
         st.info("👆 Run a workflow first to see execution details here.")
 
 
 def render_architecture_tab():
     """Render the architecture introspection tab."""
-    st.subheader("Action Registry")
+    st.header("Architecture")
+
+    st.markdown("### Action Registry")
     st.markdown("Available actions in this workflow engine:")
 
     # List all registry files
@@ -370,13 +416,13 @@ def render_architecture_tab():
                 st.error(f"Error loading schema: {e}")
 
     st.markdown("---")
-    st.subheader("Workflow Inspector")
+    st.markdown("### Workflow Inspector")
 
     workflow_files = sorted(WORKFLOWS_DIR.glob('*.yaml'))
     workflow_names = [f.stem for f in workflow_files]
 
     if workflow_names:
-        selected = st.selectbox("Select workflow to inspect", workflow_names)
+        selected = st.selectbox("Select workflow to inspect", workflow_names, key="arch_workflow_select")
         workflow_path = WORKFLOWS_DIR / f"{selected}.yaml"
 
         with st.expander("📄 Raw YAML", expanded=False):

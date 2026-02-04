@@ -259,12 +259,37 @@ def main() -> None:
         """Print structured JSON log line for parsing by executor."""
         print("@@JSON@@" + json.dumps({"event": event_type, **data}))
 
-    def _truncate(obj: Any, max_len: int = 500) -> Any:
-        """Truncate large values for display."""
-        s = json.dumps(obj) if not isinstance(obj, str) else obj
-        if len(s) > max_len:
-            return s[:max_len] + f"... ({len(s)} chars total)"
-        return obj
+    def _truncate_for_log(obj: Any, max_len: int = 2000) -> Any:
+        """Truncate large values for logging while preserving structure.
+
+        Returns the original object if small enough, otherwise a truncated
+        version that still maintains JSON structure for display.
+        """
+        try:
+            s = json.dumps(obj)
+            if len(s) <= max_len:
+                return obj
+            # For large objects, return a summary
+            if isinstance(obj, dict):
+                return {
+                    "_truncated": True,
+                    "_keys": list(obj.keys())[:10],
+                    "_size": len(s),
+                    "_preview": {k: _truncate_for_log(v, 200) for k, v in list(obj.items())[:3]}
+                }
+            elif isinstance(obj, list):
+                return {
+                    "_truncated": True,
+                    "_length": len(obj),
+                    "_size": len(s),
+                    "_preview": [_truncate_for_log(item, 200) for item in obj[:3]]
+                }
+            elif isinstance(obj, str):
+                return obj[:max_len] + f"... ({len(obj)} chars)"
+            else:
+                return obj
+        except Exception:
+            return {"_error": "Could not serialize for logging"}
 
     for nid in order:
         node = id_to_node[nid]
@@ -304,7 +329,7 @@ def main() -> None:
 
         try:
             resolved_input = _resolve_input(node.get("input") or {}, context_outputs)
-            _log("node_input", node_id=nid, input=_truncate(resolved_input))
+            _log("node_input", node_id=nid, input=_truncate_for_log(resolved_input))
         except RetryableError as e:
             _log("node_error", node_id=nid, error=str(e))
             print(f"NODE_FAILED: {nid}: {e}")
@@ -339,7 +364,7 @@ def main() -> None:
                 if not isinstance(out, dict):
                     raise PermanentError("handler must return object")
                 context_outputs[nid] = out
-                _log("node_complete", node_id=nid, duration_ms=elapsed_ms, output=_truncate(out))
+                _log("node_complete", node_id=nid, duration_ms=elapsed_ms, output=_truncate_for_log(out))
                 try:
                     with open(metrics_path, 'a', encoding='utf-8') as mf:
                         mf.write(json.dumps({'type': 'node_result', 'node': nid, 'actionRef': action_ref, 'schemaVersion': schema_version, 'ok': True}) + "\n")
