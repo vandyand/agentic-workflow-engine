@@ -72,7 +72,7 @@ def main():
         selected_workflow = workflow_options[selected_idx]
         st.caption(WORKFLOW_INFO[selected_workflow]['description'])
 
-        # Query selection
+        # Query selection - key includes workflow so it resets on workflow change
         presets = get_preset_queries(selected_workflow)
         query_options = presets + ["Custom (live only)"]
 
@@ -80,7 +80,7 @@ def main():
             "Select Query",
             range(len(query_options)),
             format_func=lambda i: query_options[i],
-            key="query_select"
+            key=f"query_select_{selected_workflow}"
         )
 
         if query_options[selected_query_idx] == "Custom (live only)":
