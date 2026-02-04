@@ -259,33 +259,33 @@ def main() -> None:
         """Print structured JSON log line for parsing by executor."""
         print("@@JSON@@" + json.dumps({"event": event_type, **data}))
 
-    def _truncate_for_log(obj: Any, max_len: int = 2000) -> Any:
+    def _truncate_for_log(obj: Any, max_len: int = 50000) -> Any:
         """Truncate large values for logging while preserving structure.
 
-        Returns the original object if small enough, otherwise a truncated
-        version that still maintains JSON structure for display.
+        Uses a high limit (50KB) to preserve most real-world outputs.
+        Only truncates truly massive responses.
         """
         try:
             s = json.dumps(obj)
             if len(s) <= max_len:
                 return obj
-            # For large objects, return a summary
+            # For very large objects, return a summary
             if isinstance(obj, dict):
                 return {
                     "_truncated": True,
-                    "_keys": list(obj.keys())[:10],
+                    "_keys": list(obj.keys()),
                     "_size": len(s),
-                    "_preview": {k: _truncate_for_log(v, 200) for k, v in list(obj.items())[:3]}
+                    "_sample": {k: _truncate_for_log(v, 5000) for k, v in list(obj.items())[:5]}
                 }
             elif isinstance(obj, list):
                 return {
                     "_truncated": True,
                     "_length": len(obj),
                     "_size": len(s),
-                    "_preview": [_truncate_for_log(item, 200) for item in obj[:3]]
+                    "_sample": [_truncate_for_log(item, 5000) for item in obj[:5]]
                 }
             elif isinstance(obj, str):
-                return obj[:max_len] + f"... ({len(obj)} chars)"
+                return obj[:max_len] + f"... ({len(obj)} chars total)"
             else:
                 return obj
         except Exception:

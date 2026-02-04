@@ -204,10 +204,14 @@ def display_execution_result(result: dict):
     else:
         st.error(f"❌ Failed: {result.get('error', 'Unknown error')}")
 
-    # Node execution details
+    # Final Result - show the actual useful output first
+    if result.get('success') and result.get('node_executions'):
+        display_final_result(result['node_executions'])
+
+    # Node execution details (collapsed by default now)
     if result.get('node_executions'):
-        st.markdown("### Node Execution Details")
-        display_node_executions(result['node_executions'])
+        with st.expander("🔧 Node Execution Details", expanded=False):
+            display_node_executions(result['node_executions'])
 
         # Summary metrics
         st.markdown("---")
@@ -227,6 +231,152 @@ def display_execution_result(result: dict):
                 if isinstance(log, dict):
                     icon = {'info': 'ℹ️', 'success': '✅', 'error': '❌', 'running': '▶️'}.get(log.get('level', ''), '•')
                     st.text(f"[{log.get('timestamp', '')}] {icon} {log.get('message', '')}")
+
+
+def display_final_result(node_executions):
+    """Display the final workflow result in a user-friendly format."""
+    if not node_executions:
+        return
+
+    # Get the last node's output
+    last_node = node_executions[-1]
+    output = last_node.get('output_data') if isinstance(last_node, dict) else getattr(last_node, 'output_data', None)
+    node_id = last_node.get('node_id', 'result') if isinstance(last_node, dict) else getattr(last_node, 'node_id', 'result')
+
+    if not output:
+        return
+
+    st.markdown("### 📄 Result")
+
+    # Parse if it's a string
+    if isinstance(output, str):
+        try:
+            output = json.loads(output)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Handle truncated data
+    if isinstance(output, dict) and output.get('_truncated'):
+        sample = output.get('_sample', output.get('_preview', {}))
+        if sample:
+            output = sample
+
+    # Extract the actual result value
+    result_value = None
+    if isinstance(output, dict):
+        # Common result key patterns
+        for key in ['result', 'text', 'content', 'extract', 'summary', 'data', 'json']:
+            if key in output:
+                result_value = output[key]
+                break
+        if result_value is None:
+            result_value = output
+    else:
+        result_value = output
+
+    # Handle nested truncated data
+    if isinstance(result_value, dict) and result_value.get('_truncated'):
+        sample = result_value.get('_sample', result_value.get('_preview', {}))
+        if sample:
+            result_value = sample
+
+    # Display based on content type
+    if isinstance(result_value, str):
+        # Text content - display in a nice box
+        if len(result_value) > 100:
+            st.markdown(f"""
+<div style="background-color: #f0f2f6; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid #1f77b4;">
+{result_value}
+</div>
+""", unsafe_allow_html=True)
+        else:
+            st.info(result_value)
+
+    elif isinstance(result_value, list):
+        # List of items - display as cards or bullets
+        if len(result_value) > 0:
+            st.markdown(f"**Found {len(result_value)} items:**")
+            for i, item in enumerate(result_value[:10]):  # Show first 10
+                if isinstance(item, dict):
+                    # Try to extract title/name
+                    title = item.get('title') or item.get('name') or item.get('key') or f"Item {i+1}"
+                    with st.expander(f"**{i+1}.** {title}"):
+                        st.json(item)
+                else:
+                    st.markdown(f"- {item}")
+            if len(result_value) > 10:
+                st.caption(f"... and {len(result_value) - 10} more items")
+
+    elif isinstance(result_value, dict):
+        # Check if it's arXiv/feed data with entries
+        if 'feed' in result_value:
+            display_arxiv_results(result_value)
+        elif 'entry' in result_value:
+            display_arxiv_results({'feed': result_value})
+        else:
+            # Generic dict - show as expandable JSON
+            with st.expander("View full result", expanded=True):
+                st.json(result_value)
+    else:
+        st.write(result_value)
+
+
+def display_arxiv_results(data):
+    """Display arXiv search results in a nice format."""
+    try:
+        feed = data.get('feed', data)
+        entries = feed.get('entry', [])
+
+        # Ensure entries is a list
+        if isinstance(entries, dict):
+            entries = [entries]
+
+        if not entries:
+            st.warning("No papers found")
+            return
+
+        st.markdown(f"**Found {len(entries)} papers:**")
+
+        for i, entry in enumerate(entries[:10]):
+            title = entry.get('title', 'Untitled')
+            if isinstance(title, dict):
+                title = title.get('#text', str(title))
+
+            # Clean up title (remove newlines)
+            title = ' '.join(title.split())
+
+            summary = entry.get('summary', '')
+            if isinstance(summary, dict):
+                summary = summary.get('#text', str(summary))
+            summary = ' '.join(summary.split())[:300]
+
+            authors = entry.get('author', [])
+            if isinstance(authors, dict):
+                authors = [authors]
+            author_names = []
+            for a in authors[:3]:
+                name = a.get('name', '') if isinstance(a, dict) else str(a)
+                if name:
+                    author_names.append(name)
+            author_str = ', '.join(author_names)
+            if len(authors) > 3:
+                author_str += f" +{len(authors)-3} more"
+
+            link = entry.get('id', '')
+            if isinstance(link, dict):
+                link = link.get('#text', '')
+
+            with st.expander(f"**{i+1}.** {title}"):
+                if author_str:
+                    st.caption(f"👥 {author_str}")
+                if summary:
+                    st.markdown(summary + "...")
+                if link:
+                    st.markdown(f"[📄 View on arXiv]({link})")
+
+    except Exception as e:
+        st.error(f"Error displaying results: {e}")
+        st.json(data)
 
 
 def parse_json_safe(data):
