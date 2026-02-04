@@ -58,7 +58,7 @@ def list_cached_queries(workflow_name: str) -> list[str]:
 PRESET_QUERIES = {
     'arxiv_search': ['transformer', 'reinforcement learning', 'LLM agents'],
     'wiki_summary': ['generative AI', 'neural networks', 'Alan Turing'],
-    'error_recovery': ['normal run', 'simulate failure'],
+    'book_search': ['dune', 'artificial intelligence', 'Isaac Asimov'],
 }
 
 

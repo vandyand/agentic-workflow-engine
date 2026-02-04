@@ -34,10 +34,10 @@ WORKFLOW_INFO = {
         'description': 'Search Wikipedia and extract article summaries',
         'icon': '📖',
     },
-    'error_recovery': {
-        'name': 'Error Recovery Demo',
-        'description': 'Demonstrates retry logic and error handling',
-        'icon': '🔄',
+    'book_search': {
+        'name': 'Book Search',
+        'description': 'Search Open Library for books by title or author',
+        'icon': '📕',
     },
 }
 
@@ -204,14 +204,14 @@ def display_execution_result(result: dict):
     else:
         st.error(f"❌ Failed: {result.get('error', 'Unknown error')}")
 
-    # Final Result - show the actual useful output first
-    if result.get('success') and result.get('node_executions'):
-        display_final_result(result['node_executions'])
-
-    # Node execution details (collapsed by default now)
+    # Node execution details first (shows what happened)
     if result.get('node_executions'):
         with st.expander("🔧 Node Execution Details", expanded=False):
             display_node_executions(result['node_executions'])
+
+    # Final Result - the useful output
+    if result.get('success') and result.get('node_executions'):
+        display_final_result(result['node_executions'])
 
         # Summary metrics
         st.markdown("---")
@@ -317,6 +317,21 @@ def display_final_result(node_executions):
             # Generic dict - show as expandable JSON
             with st.expander("View full result", expanded=True):
                 st.json(result_value)
+    elif isinstance(result_value, list) and len(result_value) > 0:
+        # Check if it looks like book results
+        first_item = result_value[0] if result_value else {}
+        if isinstance(first_item, dict) and 'title' in first_item and ('author_name' in first_item or 'first_publish_year' in first_item):
+            display_book_results(result_value)
+        else:
+            # Generic list display
+            st.markdown(f"**Found {len(result_value)} items:**")
+            for i, item in enumerate(result_value[:10]):
+                if isinstance(item, dict):
+                    title = item.get('title') or item.get('name') or item.get('key') or f"Item {i+1}"
+                    with st.expander(f"**{i+1}.** {title}"):
+                        st.json(item)
+                else:
+                    st.markdown(f"- {item}")
     else:
         st.write(result_value)
 
@@ -377,6 +392,63 @@ def display_arxiv_results(data):
     except Exception as e:
         st.error(f"Error displaying results: {e}")
         st.json(data)
+
+
+def display_book_results(books):
+    """Display Open Library book search results nicely."""
+    if not books:
+        st.warning("No books found")
+        return
+
+    st.markdown(f"**Found {len(books)} books:**")
+
+    for i, book in enumerate(books[:10]):
+        title = book.get('title', 'Untitled')
+
+        # Get authors
+        authors = book.get('author_name', [])
+        if isinstance(authors, list):
+            author_str = ', '.join(authors[:3])
+            if len(authors) > 3:
+                author_str += f" +{len(authors)-3} more"
+        else:
+            author_str = str(authors) if authors else "Unknown author"
+
+        # Get year
+        year = book.get('first_publish_year', '')
+        year_str = f" ({year})" if year else ""
+
+        # Get subjects
+        subjects = book.get('subject', [])
+        if isinstance(subjects, list):
+            subject_str = ', '.join(subjects[:5])
+        else:
+            subject_str = ''
+
+        # Cover image
+        cover_id = book.get('cover_i')
+        cover_url = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else None
+
+        # Book key for link
+        book_key = book.get('key', '')
+        book_url = f"https://openlibrary.org{book_key}" if book_key else None
+
+        with st.expander(f"**{i+1}.** {title}{year_str}"):
+            cols = st.columns([1, 3]) if cover_url else [st.container()]
+
+            if cover_url:
+                with cols[0]:
+                    st.image(cover_url, width=100)
+                content_col = cols[1]
+            else:
+                content_col = cols[0]
+
+            with content_col:
+                st.markdown(f"**Author(s):** {author_str}")
+                if subject_str:
+                    st.caption(f"📚 {subject_str}")
+                if book_url:
+                    st.markdown(f"[View on Open Library]({book_url})")
 
 
 def parse_json_safe(data):
