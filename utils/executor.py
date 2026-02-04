@@ -1,4 +1,5 @@
 """Workflow executor wrapper for Streamlit integration."""
+import json
 import os
 import subprocess
 import sys
@@ -23,11 +24,26 @@ class LogEntry:
 
 
 @dataclass
+class NodeExecution:
+    """Detailed execution info for a single node."""
+    node_id: str
+    action: str
+    version: str
+    status: str  # 'running', 'success', 'error', 'retry'
+    duration_ms: int = 0
+    input_data: Optional[Any] = None
+    output_data: Optional[Any] = None
+    error: Optional[str] = None
+    attempts: int = 1
+
+
+@dataclass
 class ExecutionResult:
     """Result of a workflow execution."""
     success: bool
     logs: List[LogEntry] = field(default_factory=list)
     node_outputs: Dict[str, Any] = field(default_factory=dict)
+    node_executions: List[NodeExecution] = field(default_factory=list)
     error: Optional[str] = None
     execution_time_ms: int = 0
 
@@ -127,24 +143,113 @@ def execute_workflow(
 
         # Parse output for node results
         node_outputs = {}
+        node_executions: List[NodeExecution] = []
+        current_nodes: Dict[str, NodeExecution] = {}
+
         for line in result.stdout.split('\n'):
-            if line.strip():
+            line = line.strip()
+            if not line:
+                continue
+
+            # Parse structured JSON logs
+            if line.startswith("@@JSON@@"):
+                try:
+                    event = json.loads(line[8:])
+                    event_type = event.get("event")
+                    node_id = event.get("node_id")
+
+                    if event_type == "node_start":
+                        ne = NodeExecution(
+                            node_id=node_id,
+                            action=event.get("action", ""),
+                            version=event.get("version", "v1"),
+                            status="running"
+                        )
+                        current_nodes[node_id] = ne
+                        logs.append(LogEntry(
+                            timestamp=_timestamp(),
+                            level='running',
+                            message=f"Starting {node_id} ({event.get('action')})",
+                            node_id=node_id
+                        ))
+
+                    elif event_type == "node_input":
+                        if node_id in current_nodes:
+                            current_nodes[node_id].input_data = event.get("input")
+                        logs.append(LogEntry(
+                            timestamp=_timestamp(),
+                            level='info',
+                            message=f"Input resolved for {node_id}",
+                            node_id=node_id,
+                            details={"input": event.get("input")}
+                        ))
+
+                    elif event_type == "node_complete":
+                        if node_id in current_nodes:
+                            ne = current_nodes[node_id]
+                            ne.status = "success"
+                            ne.duration_ms = event.get("duration_ms", 0)
+                            ne.output_data = event.get("output")
+                            node_executions.append(ne)
+                            node_outputs[node_id] = event.get("output")
+                        logs.append(LogEntry(
+                            timestamp=_timestamp(),
+                            level='success',
+                            message=f"Completed {node_id} in {event.get('duration_ms', 0)}ms",
+                            node_id=node_id,
+                            details={"output": event.get("output")}
+                        ))
+
+                    elif event_type == "node_error":
+                        if node_id in current_nodes:
+                            ne = current_nodes[node_id]
+                            ne.status = "error"
+                            ne.error = event.get("error")
+                            node_executions.append(ne)
+                        logs.append(LogEntry(
+                            timestamp=_timestamp(),
+                            level='error',
+                            message=f"Error in {node_id}: {event.get('error')}",
+                            node_id=node_id
+                        ))
+
+                    elif event_type == "node_retry":
+                        if node_id in current_nodes:
+                            current_nodes[node_id].attempts = event.get("attempt", 1)
+                        logs.append(LogEntry(
+                            timestamp=_timestamp(),
+                            level='info',
+                            message=f"Retrying {node_id} (attempt {event.get('attempt')}/{event.get('max_attempts')})",
+                            node_id=node_id
+                        ))
+
+                    elif event_type == "workflow_complete":
+                        logs.append(LogEntry(
+                            timestamp=_timestamp(),
+                            level='success',
+                            message=f"Workflow completed successfully in {elapsed_ms}ms"
+                        ))
+
+                except json.JSONDecodeError:
+                    logs.append(LogEntry(
+                        timestamp=_timestamp(),
+                        level='info',
+                        message=line
+                    ))
+            elif line not in ("OK",):
+                # Non-JSON output (legacy format or errors)
                 logs.append(LogEntry(
                     timestamp=_timestamp(),
                     level='info',
-                    message=line.strip()
+                    message=line
                 ))
 
         if result.returncode == 0:
-            logs.append(LogEntry(
-                timestamp=_timestamp(),
-                level='success',
-                message=f"Workflow completed successfully in {elapsed_ms}ms"
-            ))
             return ExecutionResult(
                 success=True,
                 logs=logs,
                 node_outputs=node_outputs,
+                node_executions=node_executions,
                 execution_time_ms=elapsed_ms
             )
         else:
@@ -157,6 +262,7 @@ def execute_workflow(
             return ExecutionResult(
                 success=False,
                 logs=logs,
+                node_executions=node_executions,
                 error=error_msg,
                 execution_time_ms=elapsed_ms
             )

@@ -15,7 +15,7 @@ from utils.cache_manager import (
     get_preset_queries,
     load_cached_result,
 )
-from utils.executor import execute_workflow, ExecutionResult
+from utils.executor import execute_workflow, ExecutionResult, NodeExecution
 
 
 # --- Constants ---
@@ -159,21 +159,98 @@ def run_workflow_and_display(workflow_name: str, query: str, is_custom: bool):
             'success': result.success,
             'logs': [vars(log) for log in result.logs],
             'node_outputs': result.node_outputs,
+            'node_executions': [vars(ne) for ne in result.node_executions],
             'execution_time_ms': result.execution_time_ms,
         }
         st.session_state.execution_logs = result.logs
 
-        # Display result
+        # Display result header
         if result.success:
             st.success(f"✅ Completed in {result.execution_time_ms}ms")
         else:
             st.error(f"❌ Failed: {result.error}")
 
-        # Show logs
-        with st.expander("Execution Log", expanded=True):
+        # Show node-by-node execution
+        if result.node_executions:
+            st.markdown("### Node Execution Details")
+            display_node_executions(result.node_executions)
+
+        # Show compact log
+        with st.expander("📋 Raw Execution Log", expanded=False):
             for log in result.logs:
                 icon = {'info': 'ℹ️', 'success': '✅', 'error': '❌', 'running': '▶️'}.get(log.level, '•')
                 st.text(f"[{log.timestamp}] {icon} {log.message}")
+
+
+def display_node_executions(node_executions):
+    """Display rich node execution details."""
+    for i, ne in enumerate(node_executions):
+        # Handle both NodeExecution objects and dicts
+        if hasattr(ne, 'node_id'):
+            node_id = ne.node_id
+            action = ne.action
+            status = ne.status
+            duration_ms = ne.duration_ms
+            input_data = ne.input_data
+            output_data = ne.output_data
+            error = ne.error
+        else:
+            node_id = ne.get('node_id', 'unknown')
+            action = ne.get('action', '')
+            status = ne.get('status', 'unknown')
+            duration_ms = ne.get('duration_ms', 0)
+            input_data = ne.get('input_data')
+            output_data = ne.get('output_data')
+            error = ne.get('error')
+
+        # Status icon and color
+        if status == 'success':
+            icon = '✅'
+            border_color = '#28a745'
+        elif status == 'error':
+            icon = '❌'
+            border_color = '#dc3545'
+        else:
+            icon = '▶️'
+            border_color = '#6c757d'
+
+        # Node header with metrics
+        col1, col2, col3 = st.columns([3, 2, 1])
+        with col1:
+            st.markdown(f"**{icon} {node_id}**")
+        with col2:
+            st.caption(f"`{action}`")
+        with col3:
+            st.caption(f"{duration_ms}ms")
+
+        # Expandable details
+        with st.expander(f"Details for {node_id}", expanded=(status == 'error')):
+            if error:
+                st.error(f"**Error:** {error}")
+
+            tab_in, tab_out = st.tabs(["📥 Input", "📤 Output"])
+
+            with tab_in:
+                if input_data:
+                    if isinstance(input_data, str) and len(input_data) > 100:
+                        st.code(input_data, language='json')
+                    else:
+                        st.json(input_data)
+                else:
+                    st.caption("No input data captured")
+
+            with tab_out:
+                if output_data:
+                    if isinstance(output_data, str) and len(output_data) > 100:
+                        st.code(output_data, language='json')
+                    else:
+                        st.json(output_data)
+                else:
+                    st.caption("No output data captured")
+
+        # Visual separator between nodes (except last)
+        if i < len(node_executions) - 1:
+            st.markdown("<div style='text-align: center; color: #666;'>⬇️</div>", unsafe_allow_html=True)
 
 
 def display_cached_result(cached: dict):
@@ -193,15 +270,34 @@ def display_cached_result(cached: dict):
 
 def render_how_it_works_tab():
     """Render the execution log viewer tab."""
-    st.subheader("Execution Log Viewer")
+    st.subheader("Execution Flow Viewer")
     st.markdown(
-        "This tab shows the real-time execution flow when you run a workflow. "
-        "Each step shows validation, node execution, and data flow."
+        "This tab shows the execution flow when you run a workflow. "
+        "Each node displays its inputs, outputs, and timing."
     )
 
-    if st.session_state.get('execution_logs'):
-        logs = st.session_state.execution_logs
+    result = st.session_state.get('execution_result', {})
 
+    if result.get('node_executions'):
+        st.markdown("---")
+        st.markdown("### Node-by-Node Execution")
+        display_node_executions(result['node_executions'])
+
+        # Summary metrics
+        st.markdown("---")
+        st.markdown("### Execution Summary")
+        total_nodes = len(result['node_executions'])
+        successful = sum(1 for ne in result['node_executions'] if ne.get('status') == 'success')
+        total_time = result.get('execution_time_ms', 0)
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Nodes Executed", total_nodes)
+        col2.metric("Successful", f"{successful}/{total_nodes}")
+        col3.metric("Total Time", f"{total_time}ms")
+
+    elif st.session_state.get('execution_logs'):
+        # Fallback to old log format
+        logs = st.session_state.execution_logs
         st.markdown("---")
         for log in logs:
             if hasattr(log, 'level'):
@@ -222,15 +318,13 @@ def render_how_it_works_tab():
             else:
                 st.info(f"[{timestamp}] {icon} {message}")
 
-        # Show node outputs if available
-        result = st.session_state.get('execution_result', {})
         if result.get('node_outputs'):
             st.subheader("Node Outputs")
             for node_id, output in result['node_outputs'].items():
                 with st.expander(f"📦 {node_id}"):
                     st.json(output)
     else:
-        st.info("👆 Run a workflow first to see execution logs here.")
+        st.info("👆 Run a workflow first to see execution details here.")
 
 
 def render_architecture_tab():

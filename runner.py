@@ -255,11 +255,26 @@ def main() -> None:
 
     context_outputs: Dict[str, Dict[str, Any]] = {}
 
+    def _log(event_type: str, **data: Any) -> None:
+        """Print structured JSON log line for parsing by executor."""
+        print("@@JSON@@" + json.dumps({"event": event_type, **data}))
+
+    def _truncate(obj: Any, max_len: int = 500) -> Any:
+        """Truncate large values for display."""
+        s = json.dumps(obj) if not isinstance(obj, str) else obj
+        if len(s) > max_len:
+            return s[:max_len] + f"... ({len(s)} chars total)"
+        return obj
+
     for nid in order:
         node = id_to_node[nid]
         action_ref = node.get("actionRef")
         schema_version = node.get("schemaVersion", "v1")
+
+        _log("node_start", node_id=nid, action=action_ref, version=schema_version)
+
         if not isinstance(action_ref, str):
+            _log("node_error", node_id=nid, error="invalid actionRef")
             print(f"NODE_FAILED: {nid}: invalid actionRef")
             raise SystemExit(3)
         handler = actions.get((action_ref, schema_version))
@@ -268,6 +283,7 @@ def main() -> None:
             mh = _mock_handler(action_ref)
             handler = mh  # type: ignore
         if handler is None:
+            _log("node_error", node_id=nid, error=f"action not implemented: {action_ref}:{schema_version}")
             print(f"NODE_FAILED: {nid}: action not implemented: {action_ref}:{schema_version}")
             raise SystemExit(3)
         if mock_io:
@@ -276,20 +292,25 @@ def main() -> None:
             if mock is not None and mock is not (lambda n, i: {}):
                 handler = mock  # type: ignore
         if (action_ref, schema_version) in quarantine and args.mode in ('verify','prod'):
+            _log("node_error", node_id=nid, error=f"action quarantined: {action_ref}:{schema_version}")
             print(f"NODE_FAILED: {nid}: action quarantined: {action_ref}:{schema_version}")
             raise SystemExit(4)
 
         if args.dry_run:
             # In dry-run, skip input resolution and execution; assume node can run
             context_outputs[nid] = {"dryRun": True}
+            _log("node_complete", node_id=nid, duration_ms=0, output={"dryRun": True})
             continue
 
         try:
             resolved_input = _resolve_input(node.get("input") or {}, context_outputs)
+            _log("node_input", node_id=nid, input=_truncate(resolved_input))
         except RetryableError as e:
+            _log("node_error", node_id=nid, error=str(e))
             print(f"NODE_FAILED: {nid}: {e}")
             raise SystemExit(4)
         except PermanentError as e:
+            _log("node_error", node_id=nid, error=str(e))
             print(f"NODE_FAILED: {nid}: {e}")
             raise SystemExit(4)
 
@@ -300,6 +321,7 @@ def main() -> None:
         timeout_ms = int(node.get("timeoutMs") or 0)
 
         attempt = 0
+        node_start_time = time.time()
         while True:
             attempt += 1
             try:
@@ -311,10 +333,13 @@ def main() -> None:
                     if elapsed_ms > timeout_ms:
                         raise RetryableError(f"timeout exceeded: {elapsed_ms}ms > {timeout_ms}ms")
                 else:
+                    start = time.time()
                     out = _execute_node(handler, node, resolved_input)
+                    elapsed_ms = int((time.time() - start) * 1000)
                 if not isinstance(out, dict):
                     raise PermanentError("handler must return object")
                 context_outputs[nid] = out
+                _log("node_complete", node_id=nid, duration_ms=elapsed_ms, output=_truncate(out))
                 try:
                     with open(metrics_path, 'a', encoding='utf-8') as mf:
                         mf.write(json.dumps({'type': 'node_result', 'node': nid, 'actionRef': action_ref, 'schemaVersion': schema_version, 'ok': True}) + "\n")
@@ -322,7 +347,9 @@ def main() -> None:
                     pass
                 break
             except RetryableError as e:
+                _log("node_retry", node_id=nid, attempt=attempt, max_attempts=max_attempts, error=str(e))
                 if attempt >= max_attempts:
+                    _log("node_error", node_id=nid, error=str(e))
                     print(f"NODE_FAILED: {nid}: {e}")
                     print(traceback.format_exc())
                     try:
@@ -334,6 +361,7 @@ def main() -> None:
                 time.sleep(max(0, backoff_ms) / 1000.0)
                 continue
             except PermanentError as e:
+                _log("node_error", node_id=nid, error=str(e))
                 print(f"NODE_FAILED: {nid}: {e}")
                 print(traceback.format_exc())
                 try:
@@ -344,7 +372,9 @@ def main() -> None:
                 raise SystemExit(4)
             except Exception as e:
                 # Unknown exceptions are treated as retryable by default
+                _log("node_retry", node_id=nid, attempt=attempt, max_attempts=max_attempts, error=str(e))
                 if attempt >= max_attempts:
+                    _log("node_error", node_id=nid, error=str(e))
                     print(f"NODE_FAILED: {nid}: {e}")
                     print(traceback.format_exc())
                     try:
@@ -361,6 +391,7 @@ def main() -> None:
             mf.write(json.dumps({'type': 'workflow_result', 'workflow': os.path.abspath(wf_path), 'ok': True}) + "\n")
     except Exception:
         pass
+    _log("workflow_complete", ok=True)
     print("OK")
 
 
