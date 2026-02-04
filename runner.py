@@ -25,8 +25,8 @@ class PermanentError(Exception):
 
 ROOT = os.path.dirname(__file__)
 PARENT = os.path.dirname(ROOT)
-if PARENT not in sys.path:
-    sys.path.insert(0, PARENT)
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 ACTIONS_DIR = os.path.join(ROOT, "actions")
 
 
@@ -128,7 +128,7 @@ def _load_actions() -> Dict[Tuple[str, str], Callable[[Dict[str, Any], Dict[str,
         if mod_name.startswith("__"):
             continue
         try:
-            mod = importlib.import_module(f"automator.actions.{mod_name}")
+            mod = importlib.import_module(f"actions.{mod_name}")
         except Exception:
             continue
         actions = getattr(mod, "ACTIONS", {})
